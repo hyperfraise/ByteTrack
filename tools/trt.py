@@ -50,7 +50,19 @@ def main():
     model.eval()
     model.cuda()
     model.head.decode_in_inference = False
-    x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda()
+    x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda().float()
+    with torch.no_grad():
+        torch.onnx.export(
+            model,  # model being run
+            x,  # model input (or a tuple for multiple inputs)
+            "model.onnx",
+            input_names=["input"],  # the model's input names
+            output_names=["output"],  # the model's output names
+            export_params=True,
+            verbose=True,
+            opset_version=13
+        )
+    return
     model_trt = torch2trt(
         model,
         [x],

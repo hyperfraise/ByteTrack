@@ -134,9 +134,14 @@ class Predictor(object):
         self.fp16 = fp16
         if trt_file is not None:
             from torch2trt import TRTModule
+            import tensorrt as trt
+            TRT_LOGGER = trt.Logger()
 
-            model_trt = TRTModule()
-            model_trt.load_state_dict(torch.load(trt_file))
+            with open(trt_file, "rb") as f, trt.Runtime(TRT_LOGGER) as runtime:
+                trt_engine = runtime.deserialize_cuda_engine(f.read())
+
+            model_trt = TRTModule(engine=trt_engine, input_names=["input"], output_names=["output"])
+            #model_trt.load_state_dict(torch.load(trt_file))
 
             x = torch.ones((1, 3, exp.test_size[0], exp.test_size[1]), device=device)
             self.model(x)
@@ -165,7 +170,8 @@ class Predictor(object):
 
         with torch.no_grad():
             timer.tic()
-            outputs = self.model(img)
+            outputs = self.model(img)[0]
+            #print(outputs)
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
             outputs = postprocess(
@@ -239,8 +245,8 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # float
     fps = cap.get(cv2.CAP_PROP_FPS)
     timestamp = time.strftime("%Y_%m_%d_%H_%M_%S", current_time)
-    save_folder = osp.join(vis_folder, timestamp)
-    os.makedirs(save_folder, exist_ok=True)
+    save_folder = osp.join(vis_folder)
+    #os.makedirs(save_folder, exist_ok=True)
     if args.demo == "video":
         save_path = osp.join(save_folder, args.path.split("/")[-1])
     else:
@@ -284,7 +290,7 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
                 online_im = img_info['raw_img']
             if args.save_result:
                 vid_writer.write(online_im)
-            ch = cv2.waitKey(1)
+            ch = cv2.waitKey(0)
             if ch == 27 or ch == ord("q") or ch == ord("Q"):
                 break
         else:
@@ -308,7 +314,8 @@ def main(exp, args):
     if args.save_result:
         vis_folder = osp.join(output_dir, "track_vis")
         os.makedirs(vis_folder, exist_ok=True)
-
+    else:
+        vis_folder = ""
     if args.trt:
         args.device = "gpu"
     args.device = torch.device("cuda" if args.device == "gpu" else "cpu")
@@ -345,11 +352,12 @@ def main(exp, args):
         model = model.half()  # to FP16
 
     if args.trt:
-        assert not args.fuse, "TensorRT model is not support model fusing!"
-        trt_file = osp.join(output_dir, "model_trt.pth")
-        assert osp.exists(
-            trt_file
-        ), "TensorRT model is not found!\n Run python3 tools/trt.py first!"
+        #assert not args.fuse, "TensorRT model is not support model fusing!"
+        #trt_file = osp.join(output_dir, "model_trt.pth")
+        trt_file = osp.join(output_dir, "model_trt.engine")
+        #assert osp.exists(
+        #    trt_file
+        #), "TensorRT model is not found!\n Run python3 tools/trt.py first!"
         model.head.decode_in_inference = False
         decoder = model.head.decode_outputs
         logger.info("Using TensorRT to inference")
