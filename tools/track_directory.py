@@ -132,8 +132,7 @@ class Predictor(object):
             img = img.half()  # to FP16
 
         with torch.no_grad():
-            outputs = self.model(img)[0]
-            #print(outputs)
+            outputs = self.model(img)
             if self.decoder is not None:
                 outputs = self.decoder(outputs, dtype=outputs.type())
             outputs = postprocess(
