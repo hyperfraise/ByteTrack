@@ -75,6 +75,8 @@ def main():
 
     logger.info("loading checkpoint done.")
     dummy_input = torch.randn(1, 3, exp.test_size[0], exp.test_size[1])
+    dynamic_axes = {args.input: {0: 'batch_size'}, args.output_name: {0: 'batch_size'}}
+
     torch.onnx._export(
         model,
         dummy_input,
@@ -82,6 +84,7 @@ def main():
         input_names=[args.input],
         output_names=[args.output],
         opset_version=args.opset,
+        dynamic_axes=dynamic_axes,
     )
     logger.info("generated onnx model named {}".format(args.output_name))
 
