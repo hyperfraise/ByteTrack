@@ -75,7 +75,7 @@ def main():
 
     logger.info("loading checkpoint done.")
     dummy_input = torch.randn(1, 3, exp.test_size[0], exp.test_size[1])
-    dynamic_axes = {args.input: {0: 'batch_size'}, args.output_name: {0: 'batch_size'}}
+    dynamic_axes = {args.input: {0: 'batch_size'}, args.output: {0: 'batch_size'}}
 
     torch.onnx._export(
         model,
