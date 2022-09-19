@@ -3,5 +3,5 @@
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
 
 from .base_exp import BaseExp
-from .build import get_exp
+from .build import get_exp_by_file
 from .yolox_base import Exp
