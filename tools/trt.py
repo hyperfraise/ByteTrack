@@ -1,3 +1,4 @@
+import numpy as np
 from loguru import logger
 
 import tensorrt as trt
@@ -26,6 +27,30 @@ def make_parser():
     return parser
 
 
+class TypeCaster(torch.nn.Module):
+    is_half = False
+
+    def __init__(self, input_type):
+        super(TypeCaster, self).__init__()
+        self.input_type = input_type
+
+    def half(self):
+        self.is_half = True
+        return super(TypeCaster, self).half()
+
+    def forward(self, x):
+        if self.is_half:
+            x = x.half()
+        else:
+            x = x.float()
+        if self.input_type == "int8":
+            x = x.where(x >= 0., x+256.)
+        self.normalization_layer(x)
+        x /= 255.0
+        x -= (0.485, 0.456, 0.406)
+        return x / (0.229, 0.224, 0.225)
+
+
 @logger.catch
 def main():
     args = make_parser().parse_args()
@@ -47,6 +72,14 @@ def main():
     model.load_state_dict(ckpt["model"])
     logger.info("loaded checkpoint done.")
     model.eval()
+
+    input_tensor = torch.randint(0, 256, (1, 3, exp.test_size[0], exp.test_size[1])).char()
+
+    typecaster_layer = TypeCaster(input_type="int8")
+    model = torch.nn.Sequential(
+        *[typecaster_layer, model]
+    )
+
     model.cuda()
     model.head.decode_in_inference = False
     x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda().float()
