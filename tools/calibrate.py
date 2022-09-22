@@ -142,7 +142,7 @@ class EngineBuilder:
         self.network = self.builder.create_network(network_flags)
         self.parser = trt.OnnxParser(self.network, self.trt_logger)
         profile = self.builder.create_optimization_profile()
-        profile.set_shape("images", (1, 3, 800, 1440), (8, 3, 800, 1440), (8, 3, 800, 1440))
+        profile.set_shape("input", (1, 3, 800, 1440), (8, 3, 800, 1440), (8, 3, 800, 1440))
         self.config.add_optimization_profile(profile)
 
         onnx_path = os.path.realpath(onnx_path)

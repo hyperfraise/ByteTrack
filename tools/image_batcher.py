@@ -145,8 +145,7 @@ class ImageBatcher:
         #     print("Preprocessing method {} not supported".format(self.preprocessor))
         #     sys.exit(1)
         # if self.format == "NCHW":
-        image = Image.open(image_path)
-        image = image.convert(mode='RGB')
+        image = cv2.imread(image_path)
         input_size = (800, 1440)
         if len(image.shape) == 3:
             padded_img = np.ones((input_size[0], input_size[1], 3)) * 114.0
@@ -169,7 +168,7 @@ class ImageBatcher:
         padded_img = padded_img.transpose(swap)
         padded_img = np.ascontiguousarray(padded_img)
 
-        return image, None
+        return padded_img, None
 
     def get_batch(self):
         """
