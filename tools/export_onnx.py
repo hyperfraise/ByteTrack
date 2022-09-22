@@ -64,7 +64,7 @@ def main():
         ckpt_file = args.ckpt
 
     # load the model state dict
-    ckpt = torch.load(ckpt_file, map_location="cpu")
+    ckpt = torch.load(ckpt_file)
 
     model.eval()
     if "model" in ckpt:
@@ -76,7 +76,8 @@ def main():
     logger.info("loading checkpoint done.")
     dummy_input = torch.randn(1, 3, exp.test_size[0], exp.test_size[1])
     dynamic_axes = {args.input: {0: 'batch_size'}, args.output: {0: 'batch_size'}}
-
+    print(args.output)
+    vsvsvd
     torch.onnx._export(
         model,
         dummy_input,
@@ -95,7 +96,7 @@ def main():
 
         # use onnxsimplify to reduce reduent model.
         onnx_model = onnx.load(args.output_name)
-        model_simp, check = simplify(onnx_model)
+        model_simp, check = simplify(onnx_model, dynamic_input_shape=True, input_shapes={args.input:[1, 3, 800, 1440]})# (8, 800, 1440, 3)])
         assert check, "Simplified ONNX model could not be validated"
         onnx.save(model_simp, args.output_name)
         logger.info("generated simplified onnx model named {}".format(args.output_name))

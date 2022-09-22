@@ -92,7 +92,7 @@ def main():
             input_names=["input"],  # the model's input names
             output_names=["output"],  # the model's output names
             export_params=True,
-            dynamic_axes=dynamic_axes,
+            #dynamic_axes=dynamic_axes,
             verbose=True,
             opset_version=13
         )

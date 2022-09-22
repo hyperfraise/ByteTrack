@@ -141,6 +141,9 @@ class EngineBuilder:
 
         self.network = self.builder.create_network(network_flags)
         self.parser = trt.OnnxParser(self.network, self.trt_logger)
+        profile = self.builder.create_optimization_profile()
+        profile.set_shape("images", (1, 3, 800, 1440), (8, 3, 800, 1440), (8, 3, 800, 1440))
+        self.config.add_optimization_profile(profile)
 
         onnx_path = os.path.realpath(onnx_path)
         with open(onnx_path, "rb") as f:
@@ -161,8 +164,8 @@ class EngineBuilder:
         for output in outputs:
             log.info("Output '{}' with shape {} and dtype {}".format(
                 output.name, output.shape, output.dtype))
-        assert self.batch_size > 0
-        self.builder.max_batch_size = self.batch_size
+        #assert self.batch_size > 0
+        self.builder.max_batch_size = 8
 
     def create_engine(self, engine_path, precision, calib_input=None, calib_cache=None, calib_num_images=5000,
                       calib_batch_size=8):
