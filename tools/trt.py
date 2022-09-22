@@ -75,13 +75,13 @@ def main():
 
     input_tensor = torch.randint(0, 256, (1, 3, exp.test_size[0], exp.test_size[1])).char()
 
+
+    model.cuda()
+    model.head.decode_in_inference = False
     typecaster_layer = TypeCaster(input_type="int8")
     model = torch.nn.Sequential(
         *[typecaster_layer, model]
     )
-
-    model.cuda()
-    model.head.decode_in_inference = False
     x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda().float()
     dynamic_axes = {"input": {0: 'batch_size'}, "output": {0: 'batch_size'}}
     with torch.no_grad():
