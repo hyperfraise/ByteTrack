@@ -45,7 +45,6 @@ class TypeCaster(torch.nn.Module):
             x = x.float()
         if self.input_type == "int8":
             x = x.where(x >= 0., x+256.)
-        self.normalization_layer(x)
         x /= 255.0
         x -= (0.485, 0.456, 0.406)
         return x / (0.229, 0.224, 0.225)
@@ -75,7 +74,6 @@ def main():
 
     input_tensor = torch.randint(0, 256, (1, 3, exp.test_size[0], exp.test_size[1])).char()
 
-
     model.cuda()
     model.head.decode_in_inference = False
     typecaster_layer = TypeCaster(input_type="int8")
@@ -92,7 +90,7 @@ def main():
             input_names=["input"],  # the model's input names
             output_names=["output"],  # the model's output names
             export_params=True,
-            #dynamic_axes=dynamic_axes,
+            dynamic_axes=dynamic_axes,
             verbose=True,
             opset_version=13
         )
