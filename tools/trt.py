@@ -33,6 +33,8 @@ class TypeCaster(torch.nn.Module):
     def __init__(self, input_type):
         super(TypeCaster, self).__init__()
         self.input_type = input_type
+        self.mean = (0.485, 0.456, 0.406)
+        self.std = (0.229, 0.224, 0.225)
 
     def half(self):
         self.is_half = True
@@ -46,8 +48,10 @@ class TypeCaster(torch.nn.Module):
         if self.input_type == "int8":
             x = x.where(x >= 0., x+256.)
         x /= 255.0
-        x -= (0.485, 0.456, 0.406)
-        return x / (0.229, 0.224, 0.225)
+        x[:, 0] = x[:, 0].sub(self.mean[0]).div(self.std[0])
+        x[:, 1] = x[:, 1].sub(self.mean[1]).div(self.std[1])
+        x[:, 2] = x[:, 2].sub(self.mean[2]).div(self.std[2])
+        return x
 
 
 @logger.catch
