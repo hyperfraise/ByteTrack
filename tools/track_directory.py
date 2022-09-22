@@ -263,7 +263,7 @@ def read_file_fps(path: str):
     fps = None
     for stream in meta_data.streams:
         if stream.is_video():
-            fps = eval(stream.__dict__["r_frame_rate"])
+            fps = eval(stream.__dict__["avg_frame_rate"])
     return fps
 
 
