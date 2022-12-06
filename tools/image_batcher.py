@@ -20,6 +20,8 @@ import sys
 import numpy as np
 from PIL import Image
 
+import cv2
+
 
 class ImageBatcher:
     """
@@ -47,7 +49,8 @@ class ImageBatcher:
             return os.path.isfile(path) and os.path.splitext(path)[1].lower() in extensions
 
         if os.path.isdir(input):
-            self.images = [os.path.join(input, f) for f in os.listdir(input) if is_image(os.path.join(input, f))]
+            self.images = [os.path.join(input, f) for f in os.listdir(
+                input) if is_image(os.path.join(input, f))]
             self.images.sort()
         elif os.path.isfile(input):
             if is_image(input):
@@ -111,47 +114,58 @@ class ImageBatcher:
         batch, and the resize scale used, if any.
         """
 
-        def resize_pad(image, pad_color=(0, 0, 0)):
-            """
-            A subroutine to implement padding and resizing. This will resize the image to fit fully within the input
-            size, and pads the remaining bottom-right portions with the value provided.
-            :param image: The PIL image object
-            :pad_color: The RGB values to use for the padded area. Default: Black/Zeros.
-            :return: Two values: The PIL image object already padded and cropped, and the resize scale used.
-            """
-            width, height = image.size
-            width_scale = width / self.width
-            height_scale = height / self.height
-            scale = 1.0 / max(width_scale, height_scale)
-            image = image.resize((round(width * scale), round(height * scale)), resample=Image.BILINEAR)
-            pad = Image.new("RGB", (self.width, self.height))
-            pad.paste(pad_color, [0, 0, self.width, self.height])
-            pad.paste(image)
-            return pad, scale
-
-        scale = None
-        image = Image.open(image_path)
-        image = image.convert(mode='RGB')
-        if self.preprocessor == "EfficientDet":
-            # For EfficientNet V2: Resize & Pad with ImageNet mean values and keep as [0,255] Normalization
-            image, scale = resize_pad(image, (124, 116, 104))
-            image = np.asarray(image, dtype=self.dtype)
-            # [0-1] Normalization, Mean subtraction and Std Dev scaling are part of the EfficientDet graph, so
-            # no need to do it during preprocessing here
+        # def resize_pad(image, pad_color=(0, 0, 0)):
+        #     """
+        #     A subroutine to implement padding and resizing. This will resize the image to fit fully within the input
+        #     size, and pads the remaining bottom-right portions with the value provided.
+        #     :param image: The PIL image object
+        #     :pad_color: The RGB values to use for the padded area. Default: Black/Zeros.
+        #     :return: Two values: The PIL image object already padded and cropped, and the resize scale used.
+        #     """
+        #     width, height = image.size
+        #     width_scale = width / self.width
+        #     height_scale = height / self.height
+        #     scale = 1.0 / max(width_scale, height_scale)
+        #     image = image.resize((round(width * scale), round(height * scale)), resample=Image.BILINEAR)
+        #     pad = Image.new("RGB", (self.width, self.height))
+        #     pad.paste(pad_color, [0, 0, self.width, self.height])
+        #     pad.paste(image)
+        #     return pad, scale
+        #
+        # scale = None
+        # image = Image.open(image_path)
+        # image = image.convert(mode='RGB')
+        # if self.preprocessor == "EfficientDet":
+        #     # For EfficientNet V2: Resize & Pad with ImageNet mean values and keep as [0,255] Normalization
+        #     image, scale = resize_pad(image, (124, 116, 104))
+        #     image = np.asarray(image, dtype=self.dtype)
+        #     # [0-1] Normalization, Mean subtraction and Std Dev scaling are part of the EfficientDet graph, so
+        #     # no need to do it during preprocessing here
+        # else:
+        #     print("Preprocessing method {} not supported".format(self.preprocessor))
+        #     sys.exit(1)
+        # if self.format == "NCHW":
+        image = cv2.imread(image_path)
+        input_size = (800, 1440)
+        if len(image.shape) == 3:
+            padded_img = (np.ones((input_size[0], input_size[1], 3)) * 114.0).astype(np.uint8)
         else:
-            print("Preprocessing method {} not supported".format(self.preprocessor))
-            sys.exit(1)
-        if self.format == "NCHW":
-            image = np.transpose(image, (2, 0, 1))
-        image /= 255.
-        image[0, :, :] -= 0.485
-        image[1, :, :] -= 0.456
-        image[2, :, :] -= 0.406
-        image[0, :, :] /= 0.229
-        image[1, :, :] /= 0.224
-        image[2, :, :] /= 0.225
+            padded_img = (np.ones(input_size) * 114.0).astype(np.uint8)
 
-        return image, scale
+        img = np.array(image).astype(np.uint8)
+        r = min(input_size[0] / img.shape[0], input_size[1] / img.shape[1])
+        resized_img = cv2.resize(
+            img,
+            (int(img.shape[1] * r), int(img.shape[0] * r)),
+            interpolation=cv2.INTER_LINEAR,
+        )
+        padded_img[: int(img.shape[0] * r), : int(img.shape[1] * r)] = resized_img
+        swap = (2, 0, 1)
+        padded_img = padded_img[:, :, ::-1]
+        padded_img = padded_img.transpose(swap)
+        padded_img = np.ascontiguousarray(padded_img).astype(np.int8)
+
+        return padded_img, None
 
     def get_batch(self):
         """

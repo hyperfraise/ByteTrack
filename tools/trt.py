@@ -1,8 +1,8 @@
+import numpy as np
 from loguru import logger
 
 import tensorrt as trt
 import torch
-from torch2trt import torch2trt
 
 from yolox.exp import get_exp
 
@@ -27,6 +27,33 @@ def make_parser():
     return parser
 
 
+class TypeCaster(torch.nn.Module):
+    is_half = False
+
+    def __init__(self, input_type):
+        super(TypeCaster, self).__init__()
+        self.input_type = input_type
+        self.mean = (0.485, 0.456, 0.406)
+        self.std = (0.229, 0.224, 0.225)
+
+    def half(self):
+        self.is_half = True
+        return super(TypeCaster, self).half()
+
+    def forward(self, x):
+        if self.is_half:
+            x = x.half()
+        else:
+            x = x.float()
+        if self.input_type == "int8":
+            x = x.where(x >= 0., x+256.)
+        x /= 255.0
+        x[:, 0] = x[:, 0].sub(self.mean[0]).div(self.std[0])
+        x[:, 1] = x[:, 1].sub(self.mean[1]).div(self.std[1])
+        x[:, 2] = x[:, 2].sub(self.mean[2]).div(self.std[2])
+        return x
+
+
 @logger.catch
 def main():
     args = make_parser().parse_args()
@@ -48,9 +75,17 @@ def main():
     model.load_state_dict(ckpt["model"])
     logger.info("loaded checkpoint done.")
     model.eval()
+
+    input_tensor = torch.randint(0, 256, (1, 3, exp.test_size[0], exp.test_size[1])).char()
+
     model.cuda()
     model.head.decode_in_inference = False
+    typecaster_layer = TypeCaster(input_type="int8")
+    model = torch.nn.Sequential(
+        *[typecaster_layer, model]
+    )
     x = torch.ones(1, 3, exp.test_size[0], exp.test_size[1]).cuda().float()
+    dynamic_axes = {"input": {0: 'batch_size'}, "output": {0: 'batch_size'}}
     with torch.no_grad():
         torch.onnx.export(
             model,  # model being run
@@ -59,27 +94,11 @@ def main():
             input_names=["input"],  # the model's input names
             output_names=["output"],  # the model's output names
             export_params=True,
+            dynamic_axes=dynamic_axes,
             verbose=True,
             opset_version=13
         )
     return
-    model_trt = torch2trt(
-        model,
-        [x],
-        fp16_mode=True,
-        log_level=trt.Logger.INFO,
-        max_workspace_size=(1 << 32),
-    )
-    torch.save(model_trt.state_dict(), os.path.join(file_name, "model_trt.pth"))
-    logger.info("Converted TensorRT model done.")
-    engine_file = os.path.join(file_name, "model_trt.engine")
-    engine_file_demo = os.path.join("deploy", "TensorRT", "cpp", "model_trt.engine")
-    with open(engine_file, "wb") as f:
-        f.write(model_trt.engine.serialize())
-
-    shutil.copyfile(engine_file, engine_file_demo)
-
-    logger.info("Converted TensorRT model engine file is saved for C++ inference.")
 
 
 if __name__ == "__main__":
