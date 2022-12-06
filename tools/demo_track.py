@@ -78,15 +78,19 @@ def make_parser():
         help="Using TensorRT model for testing.",
     )
     # tracking args
-    parser.add_argument("--track_thresh", type=float, default=0.5, help="tracking confidence threshold")
-    parser.add_argument("--track_buffer", type=int, default=30, help="the frames for keep lost tracks")
-    parser.add_argument("--match_thresh", type=float, default=0.8, help="matching threshold for tracking")
+    parser.add_argument("--track_thresh", type=float, default=0.5,
+                        help="tracking confidence threshold")
+    parser.add_argument("--track_buffer", type=int, default=30,
+                        help="the frames for keep lost tracks")
+    parser.add_argument("--match_thresh", type=float, default=0.8,
+                        help="matching threshold for tracking")
     parser.add_argument(
         "--aspect_ratio_thresh", type=float, default=1.6,
         help="threshold for filtering out boxes of which aspect ratio are above the given value."
     )
     parser.add_argument('--min_box_area', type=float, default=10, help='filter out tiny boxes')
-    parser.add_argument("--mot20", dest="mot20", default=False, action="store_true", help="test mot20.")
+    parser.add_argument("--mot20", dest="mot20", default=False,
+                        action="store_true", help="test mot20.")
     return parser
 
 
@@ -109,7 +113,8 @@ def write_results(filename, results):
                 if track_id < 0:
                     continue
                 x1, y1, w, h = tlwh
-                line = save_format.format(frame=frame_id, id=track_id, x1=round(x1, 1), y1=round(y1, 1), w=round(w, 1), h=round(h, 1), s=round(score, 2))
+                line = save_format.format(frame=frame_id, id=track_id, x1=round(
+                    x1, 1), y1=round(y1, 1), w=round(w, 1), h=round(h, 1), s=round(score, 2))
                 f.write(line)
     logger.info('save results to {}'.format(filename))
 
@@ -194,7 +199,8 @@ def image_demo(predictor, vis_folder, current_time, args):
     for frame_id, img_path in enumerate(files, 1):
         outputs, img_info = predictor.inference(img_path, timer)
         if outputs[0] is not None:
-            online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
+            online_targets = tracker.update(
+                outputs[0], [img_info['height'], img_info['width']], exp.test_size)
             online_tlwhs = []
             online_ids = []
             online_scores = []
@@ -212,7 +218,8 @@ def image_demo(predictor, vis_folder, current_time, args):
                     )
             timer.toc()
             online_im = plot_tracking(
-                img_info['raw_img'], online_tlwhs, online_ids, frame_id=frame_id, fps=1. / timer.average_time
+                img_info['raw_img'], online_tlwhs, online_ids, frame_id=frame_id, fps=1.
+                / timer.average_time
             )
         else:
             timer.toc()
@@ -226,7 +233,8 @@ def image_demo(predictor, vis_folder, current_time, args):
             cv2.imwrite(osp.join(save_folder, osp.basename(img_path)), online_im)
 
         if frame_id % 20 == 0:
-            logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
+            logger.info('Processing frame {} ({:.2f} fps)'.format(
+                frame_id, 1. / max(1e-5, timer.average_time)))
 
         ch = cv2.waitKey(0)
         if ch == 27 or ch == ord("q") or ch == ord("Q"):
@@ -261,12 +269,14 @@ def imageflow_demo(predictor, vis_folder, current_time, args):
     results = []
     while True:
         if frame_id % 20 == 0:
-            logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
+            logger.info('Processing frame {} ({:.2f} fps)'.format(
+                frame_id, 1. / max(1e-5, timer.average_time)))
         ret_val, frame = cap.read()
         if ret_val:
             outputs, img_info = predictor.inference(frame, timer)
             if outputs[0] is not None:
-                online_targets = tracker.update(outputs[0], [img_info['height'], img_info['width']], exp.test_size)
+                online_targets = tracker.update(
+                    outputs[0], [img_info['height'], img_info['width']], exp.test_size)
                 online_tlwhs = []
                 online_ids = []
                 online_scores = []

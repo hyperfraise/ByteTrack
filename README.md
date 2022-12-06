@@ -44,6 +44,14 @@ git clone https://github.com/ifzhang/ByteTrack.git
 cd ByteTrack
 pip3 install -r requirements.txt
 python3 setup.py develop
+apt update -y
+pip install pycuda ffprobe3 opencv-contrib-python loguru thop ujson lap cython_bbox
+git clone https://github.com/NVIDIA-AI-IOT/torch2trt
+cd torch2trt
+python setup.py install
+cd ..
+export DEBIAN_FRONTEND=noninteractive
+apt install ffmpeg libgl-dev -y
 ```
 
 Step2. Install [pycocotools](https://github.com/cocodataset/cocoapi).
