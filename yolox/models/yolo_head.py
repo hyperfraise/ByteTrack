@@ -193,6 +193,8 @@ class YOLOXHead(nn.Module):
 
             outputs.append(output)
 
+        # TODO: Save outputs list of tensors for future use
+
         if self.training:
             return self.get_losses(
                 imgs,

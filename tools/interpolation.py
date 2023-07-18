@@ -1,53 +1,25 @@
+import sys
+import argparse
 import numpy as np
 import os
 import glob
-import motmetrics as mm
 
-from yolox.evaluators.evaluation import Evaluator
+sys.path.append('.')
+
+
+def make_parser():
+    parser = argparse.ArgumentParser("Interpolation!")
+    parser.add_argument("--txt_path", default="", help="path to tracking result path in MOTChallenge format")
+    parser.add_argument("--save_path", default=None, help="save result path, none for override")
+    parser.add_argument("--n_min", type=int, default=5, help="minimum")
+    parser.add_argument("--n_dti", type=int, default=20, help="dti")
+
+    return parser
 
 
 def mkdir_if_missing(d):
     if not os.path.exists(d):
         os.makedirs(d)
-
-
-def eval_mota(data_root, txt_path):
-    accs = []
-    seqs = sorted([s for s in os.listdir(data_root) if s.endswith('FRCNN')])
-    #seqs = sorted([s for s in os.listdir(data_root)])
-    for seq in seqs:
-        video_out_path = os.path.join(txt_path, seq + '.txt')
-        evaluator = Evaluator(data_root, seq, 'mot')
-        accs.append(evaluator.eval_file(video_out_path))
-    metrics = mm.metrics.motchallenge_metrics
-    mh = mm.metrics.create()
-    summary = Evaluator.get_summary(accs, seqs, metrics)
-    strsummary = mm.io.render_summary(
-        summary,
-        formatters=mh.formatters,
-        namemap=mm.io.motchallenge_metric_names
-    )
-    print(strsummary)
-
-
-def get_mota(data_root, txt_path):
-    accs = []
-    seqs = sorted([s for s in os.listdir(data_root) if s.endswith('FRCNN')])
-    #seqs = sorted([s for s in os.listdir(data_root)])
-    for seq in seqs:
-        video_out_path = os.path.join(txt_path, seq + '.txt')
-        evaluator = Evaluator(data_root, seq, 'mot')
-        accs.append(evaluator.eval_file(video_out_path))
-    metrics = mm.metrics.motchallenge_metrics
-    mh = mm.metrics.create()
-    summary = Evaluator.get_summary(accs, seqs, metrics)
-    strsummary = mm.io.render_summary(
-        summary,
-        formatters=mh.formatters,
-        namemap=mm.io.motchallenge_metric_names
-    )
-    mota = float(strsummary.split(' ')[-6][:-1])
-    return mota
 
 
 def write_results_score(filename, results):
@@ -67,6 +39,7 @@ def dti(txt_path, save_path, n_min=25, n_dti=20):
     seq_txts = sorted(glob.glob(os.path.join(txt_path, '*.txt')))
     for seq_txt in seq_txts:
         seq_name = seq_txt.split('/')[-1]
+        print(seq_name)
         seq_data = np.loadtxt(seq_txt, dtype=np.float64, delimiter=',')
         min_id = int(np.min(seq_data[:, 1]))
         max_id = int(np.max(seq_data[:, 1]))
@@ -115,29 +88,11 @@ def dti(txt_path, save_path, n_min=25, n_dti=20):
 
 
 if __name__ == '__main__':
-    data_root = '/opt/tiger/demo/ByteTrack/datasets/mot/test'
-    txt_path = '/opt/tiger/demo/ByteTrack/YOLOX_outputs/yolox_x_mix_det/track_results'
-    save_path = '/opt/tiger/demo/ByteTrack/YOLOX_outputs/yolox_x_mix_det/track_results_dti'
-    
-    mkdir_if_missing(save_path)
-    dti(txt_path, save_path, n_min=5, n_dti=20)
-    print('Before DTI: ')
-    eval_mota(data_root, txt_path)
-    print('After DTI:')
-    eval_mota(data_root, save_path)
+    args = make_parser().parse_args()
 
-    '''
-    mota_best = 0.0
-    best_n_min = 0
-    best_n_dti = 0
-    for n_min in range(5, 50, 5):
-        for n_dti in range(5, 30, 5):
-            dti(txt_path, save_path, n_min, n_dti)
-            mota = get_mota(data_root, save_path)
-            if mota > mota_best:
-                mota_best = mota
-                best_n_min = n_min
-                best_n_dti = n_dti
-                print(mota_best, best_n_min, best_n_dti)
-    print(mota_best, best_n_min, best_n_dti)
-    '''
+    if args.save_path is None:
+        args.save_path = args.txt_path
+
+    mkdir_if_missing(args.save_path)
+    dti(args.txt_path, args.save_path, n_min=args.n_min, n_dti=args.n_dti)
+
