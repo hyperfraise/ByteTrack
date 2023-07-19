@@ -1,3 +1,42 @@
+# Installation
+```
+nvidia-docker run --gpus all --name tracking --security-opt seccomp=unconfined --net=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v /home/veesion/ByteTrack/:/workspace/ -v /home/veesion/data/:/data/ -it nvcr.io/nvidia/pytorch:23.06-py3 /bin/bash
+pip3 uninstall -y opencv-contrib-python   && rm -rf /usr/local/lib/python3.10/dist-packages/cv2   && pip install opencv-contrib-python
+```
+## Requirements
+```
+apt update
+DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install ffmpeg -y
+pip install ffprobe3 av
+pip3 install loguru thop lap yacs termcolor
+python3 setup.py develop
+pip3 install cython; pip3 install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+pip3 install cython_bbox
+# faiss cpu / gpu
+pip3 install faiss-cpu
+pip3 install faiss-gpu
+
+```
+
+And download and store the trained models in 'pretrained' folder as follow:
+```
+<BoT-SORT_dir>/pretrained
+```
+- We used the publicly available [ByteTrack](https://github.com/ifzhang/ByteTrack) model zoo trained on MOT17, MOT20 and ablation study for YOLOX object detection.
+
+- Ours trained ReID models can be downloaded from [MOT17-SBS-S50](https://drive.google.com/file/d/1QZFWpoa80rqo7O-HXmlss8J8CnS7IUsN/view?usp=sharing), [MOT20-SBS-S50](https://drive.google.com/file/d/1KqPQyj6MFyftliBHEIER7m_OrGpcrJwi/view?usp=sharing).
+
+- For multi-class MOT use [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) or [YOLOv7](https://github.com/WongKinYiu/yolov7) trained on COCO (or any custom weights). 
+
+
+# Usage
+```
+python3 tools/demo.py video --path /data/mado/videos/ -f yolox/exps/example/mot/yolox_x_mix_det.py -c pretrained/bytetrack_x_mot20.tar --with-reid --fuse-score --fp16 --fuse --fast-reid-weights pretrained/mot20_sbs_S50.pth --conf 0.2
+python3 tools/interpolation.py --txt_path YOLOX_outputs/yolox_x_mix_det/track_vis/tracks/ --save_path YOLOX_outputs/yolox_x_mix_det/track_vis/interpolated_tracks/
+
+```
+
+
 # BoT-SORT
 
 > [**BoT-SORT: Robust Associations Multi-Pedestrian Tracking**](https://arxiv.org/abs/2206.14651)
